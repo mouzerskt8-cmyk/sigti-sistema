@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGTI | Sistema de Gestão TI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- VARIÁVEIS DE COR E TEMA --- */
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --white: #ffffff;
+            --sidebar-width: 280px;
+        }
+
+        body.dark-mode {
+            --primary: #020617;
+            --secondary: #1e293b;
+            --accent: #60a5fa;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        /* --- RESET E ESTILOS GERAIS --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* --- TELA DE LOGIN --- */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .login-box {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-box h2 {
+            color: #0f172a;
+            margin-bottom: 24px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        /* --- BARRA LATERAL --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            padding: 32px 20px;
+            position: fixed;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .sidebar h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 40px;
+            background: linear-gradient(to right, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .nav-group { margin-bottom: 20px; }
+        .nav-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #475569;
+            margin-bottom: 8px;
+            padding-left: 12px;
+            font-weight: 700;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            color: #94a3b8;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .nav-item.active { border-left: 4px solid var(--accent); }
+
+        /* --- ÁREA PRINCIPAL --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 40px;
+            width: calc(100% - var(--sidebar-width));
+            max-width: 1400px;
+        }
+
+        .header-page {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 28px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        /* --- TABELAS --- */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th {
+            padding: 16px;
+            background: var(--bg);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border);
+        }
+        td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        tr:hover { background-color: rgba(59, 130, 246, 0.02); }
+
+        /* --- FORMULÁRIOS E BOTÕES --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus { border-color: var(--accent); }
+
+        button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        /* Modal de Visualização */
+#modal-termo {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 40px;
+    position: relative;
+    color: black;
+}
+.btn-print-floating {
+    position: sticky;
+    top: 0;
+    float: right;
+    margin-bottom: 20px;
+}
+@media print {
+    body * { visibility: hidden !important; }
+    #print-area, #print-area * { visibility: visible !important; }
+    #print-area { 
+        position: absolute; 
+        left: 0; top: 0; width: 100%; 
+        display: block !important; 
+    }
+    .no-print { display: none !important; }
+}
+
+        button:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        button.secondary { background: #64748b; }
+        button.outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+
+        /* --- STATUS BADGES --- */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-pendente { background: #fef3c7; color: #92400e; }
+        .status-aprovado { background: #dcfce7; color: #166534; }
+        .status-uso { background: #dbeafe; color: #1e40af; }
+
+        /* --- PRINT VIEW (TERMO) --- */
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 40px; color: black !important; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div id="modal-termo">
+    <div class="modal-content" id="print-area">
+        </div>
+</div>
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>SIGTI COTEC</h2>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-size:13px; color:#475569">E-mail Corporativo</label>
+                <input type="email" id="log-email" placeholder="nome@cotec.com.br">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="display:block; margin-bottom:8px; font-size:13px; color:#475569">Senha de Acesso</label>
+                <input type="password" id="log-senha" placeholder="••••••••">
+            </div>
+            <button onclick="fazerLogin()" style="width: 100%;">ACESSAR SISTEMA</button>
+            <p id="login-error" style="color:var(--danger); font-size:12px; margin-top:16px; text-align:center; display:none;">Credenciais inválidas. Tente novamente.</p>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar" style="display: none;">
+        <h1>SIGTI</h1>
+        
+        <div id="user-info" style="padding: 0 12px 32px 12px; border-bottom: 1px solid #1e293b; margin-bottom: 32px;">
+            <div style="font-size: 14px; font-weight: 600;" id="user-name">Carregando...</div>
+            <div style="font-size: 12px; color: #64748b;" id="user-role">Setor TI</div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Menu Principal</div>
+            <div class="nav-item active" onclick="navegar('solicitacoes', this)"><span>📝</span> Ordens de Serviço</div>
+            <div class="nav-item" onclick="navegar('termos', this)"><span>📄</span> Meus Termos</div>
+        </div>
+
+        <div id="admin-menu" style="display: none;">
+            <div class="nav-group">
+                <div class="nav-label">Administração TI</div>
+                <div class="nav-item" onclick="navegar('usuarios', this)"><span>👥</span> Gestão de Pessoas</div>
+                <div class="nav-item" onclick="navegar('estoque', this)"><span>📦</span> Controle de Estoque</div>
+                <div class="nav-item" onclick="navegar('historico', this)"><span>🕘</span> Devoluções/Auditoria</div>
+            </div>
+        </div>
+
+        <div style="margin-top: auto;">
+            <div class="nav-item" onclick="toggleTheme()"><span>🌓</span> Alternar Tema</div>
+            <div class="nav-item" onclick="logout()" style="color: #f87171;"><span>🚪</span> Sair do Sistema</div>
+        </div>
+    </div>
+
+    <main class="main-content" id="app" style="display: none;">
+        <div id="view-container"></div>
+    </main>
+
+   
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    /* ============================================================
+       CONEXÃO OFICIAL - SIGTI
+       ============================================================ */
+    const SB_URL = 'https://ilyhtxionytobqkerdka.supabase.co';
+    const SB_KEY = 'sb_publishable_iNHedC8e8Ztp46umNmFEQQ_NV-vq8Kt'; 
+
+    // Usamos um nome único para a variável para evitar o erro de "already declared"
+    var supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+    let currentUser = null;
+
+    // Função para testar se a conexão está funcionando (olhe o console F12)
+    supabaseClient.from('usuarios').select('count', { count: 'exact', head: true })
+        .then(res => console.log("Status da Conexão Supabase:", res.error ? "Erro: " + res.error.message : "Conectado com Sucesso!"));
+
+    /* ============================================================
+       SISTEMA DE AUTENTICAÇÃO
+       ============================================================ */
+    async function fazerLogin() {
+        const email = document.getElementById('log-email').value.trim();
+        const senha = document.getElementById('log-senha').value.trim();
+        const errorMsg = document.getElementById('login-error');
+
+        try {
+            const { data: usuario, error } = await supabaseClient
+                .from('usuarios')
+                .select('*')
+                .eq('email', email)
+                .eq('senha', senha)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            if (usuario) {
+                currentUser = usuario;
+                
+                // Transição de tela
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('app').style.display = 'block';
+                
+                document.getElementById('user-name').innerText = currentUser.nome;
+                document.getElementById('user-role').innerText = currentUser.is_ti ? 'Administrador TI' : 'Colaborador';
+                
+                if(currentUser.is_ti) {
+                    document.getElementById('admin-menu').style.display = 'block';
+                }
+                
+                // Se você tiver a função navegar definida, ela será chamada aqui
+                if (typeof navegar === "function") {
+                    navegar('solicitacoes', document.querySelector('.nav-item'));
+                }
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        } catch (err) {
+            console.error("Erro no Login:", err);
+            alert("Erro técnico: " + err.message);
+        }
+    }
+
+        /* ============================================================
+           ROTEAMENTO E NAVEGAÇÃO
+           ============================================================ */
+    function navegar(tela, el) {
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    if (el && el.classList) { el.classList.add('active'); }
+
+    const container = document.getElementById('view-container');
+    if (!container) return;
+
+    switch(tela) {
+        case 'solicitacoes':
+            renderSolicitacoes();
+            break;
+        case 'estoque':
+            renderEstoque();
+            break;
+        case 'usuarios':
+            renderUsuarios();
+            break;
+        // ADICIONE ESTAS DUAS LINHAS ABAIXO:
+        case 'termos':
+            renderTermos();
+            break;
+        case 'historico':
+            renderHistorico();
+            break;
+    }
+}
+
+        /* ============================================================
+           TELA: ORDENS DE SERVIÇO
+           ============================================================ */
+        async function renderSolicitacoes() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="header-page">
+                    <h1>Ordens de Serviço</h1>
+                    <button onclick="abrirModalOS()">+ Nova Solicitação</button>
+                </div>
+                
+                <div class="card" id="form-os" style="display:none; margin-bottom:32px; border-top: 4px solid var(--accent);">
+                    <h3 style="margin-bottom:20px;">Detalhes do Pedido</h3>
+                    <div class="form-grid">
+                        <div>
+                            <label>Tipo de Equipamento/Serviço</label>
+                            <select id="os-tipo">
+                                <option value="Notebook">Notebook</option>
+                                <option value="Projetor">Projetor</option>
+                                <option value="Manutenção">Manutenção / Assistência</option>
+                                <option value="Outros">Acessórios / Outros</option>
+                            </select>
+                        </div>
+                        <div style="grid-column: span 2">
+                            <label>Justificativa ou Descrição do Problema</label>
+                            <input type="text" id="os-desc" placeholder="Ex: Uso em aula de laboratório ou Tecla X parou de funcionar">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="enviarOS()">Confirmar Abertura</button>
+                        <button class="outline" onclick="abrirModalOS()">Cancelar</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data</th>
+                                    <th>Colaborador</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-os"></tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            carregarTabelaOS();
+        }
+
+        function abrirModalOS() {
+            const f = document.getElementById('form-os');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+        }
+
+        
+
+        async function enviarOS() {
+    const tipo = document.getElementById('os-tipo').value;
+    const desc = document.getElementById('os-desc').value;
+
+    if (!desc) return alert("Descreva o problema!");
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('solicitacoes')
+            .insert([
+                { 
+                    usuario_id: currentUser.id, 
+                    usuario_nome: currentUser.nome, 
+                    tipo: tipo, 
+                    descricao: desc, 
+                    status: 'pendente' 
+                }
+            ]);
+
+        if (error) throw error;
+
+        alert("Solicitação enviada com sucesso!");
+        fecharModal(); // Fecha a janelinha
+        renderSolicitacoes(); // Atualiza a tabela na hora
+    } catch (err) {
+        console.error("Erro ao enviar:", err);
+        alert("Erro ao gravar no banco: " + err.message);
+    }
+}
+
+        /* ============================================================
+           LÓGICA DE APROVAÇÃO (ID 2026001)
+           ============================================================ */
+        
+async function processarOS(id, uid, tipo, nome) {
+    try {
+        let patrimonio = "N/A - SERVIÇO";
+
+        // 1️⃣ BUSCAR ESTOQUE NO SUPABASE
+        if (tipo === 'Notebook' || tipo === 'Projetor') {
+            const { data: estoque, error: errE } = await supabaseClient
+                .from('estoque')
+                .select('*')
+                .eq('tipo', tipo)
+                .eq('status', 'disponivel');
+
+            if (errE) throw new Error("Erro ao buscar estoque");
+
+            if (!estoque || estoque.length === 0) {
+                return alert(`ERRO: Não há ${tipo} disponível no estoque.`);
+            }
+
+            const listaCodigos = estoque.map(i => i.patrimonio);
+            const input = prompt(`Selecione um patrimônio disponível:\n${listaCodigos.join(" | ")}`);
+
+            if (!input || !listaCodigos.includes(input)) {
+                return alert("Patrimônio inválido.");
+            }
+
+            patrimonio = input;
+
+            // Baixa no estoque (Update no Supabase)
+            const { error: errPatch } = await supabaseClient
+                .from('estoque')
+                .update({ status: 'emprestado' })
+                .eq('patrimonio', patrimonio);
+
+            if (errPatch) throw new Error("Erro ao atualizar estoque");
+        }
+
+        // 2️⃣ GERAR ID SEQUENCIAL (2026001...)
+        const anoAtual = new Date().getFullYear();
+        
+        const { data: todosTermos, error: errT } = await supabaseClient
+            .from('termos')
+            .select('solicitacao_id');
+
+        if (errT) throw new Error("Erro ao buscar termos");
+
+        const termosDoAno = todosTermos.filter(t => 
+            t.solicitacao_id && t.solicitacao_id.toString().startsWith(anoAtual.toString())
+        );
+
+        let proximoNumero = 1;
+        if (termosDoAno.length > 0) {
+            const sequenciais = termosDoAno.map(t => {
+                const numero = t.solicitacao_id.toString().substring(4);
+                return parseInt(numero) || 0;
+            });
+            proximoNumero = Math.max(...sequenciais) + 1;
+        }
+
+        const idCustom = `${anoAtual}${proximoNumero.toString().padStart(3, '0')}`;
+
+        // 3️⃣ SALVAR TERMO NO SUPABASE
+        const { error: errSalvar } = await supabaseClient
+            .from('termos')
+            .insert([{
+                solicitacao_id: idCustom,
+                usuario_id: uid,
+                usuario_nome: nome,
+                equipamento_cod: patrimonio,
+                tipo: tipo,
+                data_geracao: new Date().toLocaleDateString('pt-BR')
+            }]);
+
+        if (errSalvar) throw new Error("Erro ao gerar termo no banco");
+
+        // 4️⃣ ATUALIZAR STATUS DA SOLICITAÇÃO
+        const { error: errFinal } = await supabaseClient
+            .from('solicitacoes')
+            .update({ status: 'aprovado' })
+            .eq('id', id);
+
+        if (errFinal) throw new Error("Erro ao finalizar solicitação");
+
+        alert(`Ordem de Serviço #${idCustom} gerada com sucesso!`);
+        
+        // Recarrega a tela atual para ver as mudanças
+        navegar('solicitacoes');
+
+    } catch (erro) {
+        console.error("Erro no processamento:", erro);
+        alert("Erro técnico: " + erro.message);
+    }
+}
+async function carregarTabelaOS() {
+    const { data: lista, error } = await supabaseClient
+        .from('solicitacoes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Erro ao carregar OS:", error);
+        return;
+    }
+
+    const tbody = document.getElementById('lista-os');
+    if (!tbody) return;
+
+    tbody.innerHTML = lista.map(os => `
+        <tr>
+            <td>#${os.id}</td>
+            <td>${new Date(os.created_at || Date.now()).toLocaleDateString()}</td>
+            <td>${os.usuario_nome}</td>
+            <td><b>${os.tipo}</b></td>
+            <td><span class="badge status-${os.status}">${os.status}</span></td>
+            <td>
+                ${currentUser.is_ti && os.status === 'pendente'
+                    ? `<button onclick="processarOS(${os.id}, ${os.usuario_id}, '${os.tipo}', '${os.usuario_nome}')" style="padding:6px 12px; font-size:12px;">Analisar</button>`
+                    : '---'}
+            </td>
+        </tr>
+    `).join('');
+}
+/* ============================================================
+   TELA: GESTÃO DE ESTOQUE
+   ============================================================ */
+async function renderEstoque() {
+    const container = document.getElementById('view-container');
+    container.innerHTML = `
+        <div class="header-page">
+            <h1>Controle de Estoque</h1>
+        </div>
+        <div class="card">
+            <h3 style="margin-bottom:15px">Cadastrar Novo Item</h3>
+            <div class="form-grid">
+                <input type="text" id="est-pat" placeholder="Número do Patrimônio">
+                <select id="est-tipo">
+                    <option>Notebook</option>
+                    <option>Projetor</option>
+                    <option>Monitor</option>
+                </select>
+                <input type="text" id="est-mod" placeholder="Modelo / Marca">
+                <button onclick="cadastrarEstoque()">Adicionar ao Banco</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Patrimônio</th><th>Tipo</th><th>Modelo</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="lista-estoque"></tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    carregarTabelaEstoque();
+}
+
+async function cadastrarEstoque() {
+    const p = document.getElementById('est-pat').value;
+    const t = document.getElementById('est-tipo').value;
+    const m = document.getElementById('est-mod').value;
+
+    if (!p) return alert("Patrimônio obrigatório.");
+
+    const { error } = await supabaseClient
+        .from('estoque')
+        .insert([{
+            patrimonio: p,
+            tipo: t,
+            modelo: m,
+            status: 'disponivel'
+        }]);
+
+    if (error) {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar no banco. Verifique se o patrimônio já existe.");
+    } else {
+        alert("Item cadastrado!");
+        document.getElementById('est-pat').value = '';
+        document.getElementById('est-mod').value = '';
+        carregarTabelaEstoque();
+    }
+} // <--- FECHAMENTO CORRETO DA FUNÇÃO
+
+async function carregarTabelaEstoque() {
+    const { data: dados, error } = await supabaseClient
+        .from('estoque')
+        .select('*')
+        .order('patrimonio', { ascending: true });
+
+    if (error) {
+        console.error("Erro ao carregar:", error);
+        return;
+    }
+
+    const container = document.getElementById('lista-estoque');
+    if (!container) return;
+
+    container.innerHTML = dados.map(i => `
+        <tr>
+            <td>${i.patrimonio}</td>
+            <td>${i.tipo}</td>
+            <td>${i.modelo || '---'}</td>
+            <td>
+                <span class="badge status-${i.status === 'disponivel' ? 'aprovado' : 'uso'}">
+                    ${i.status}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+        /* ============================================================
+           TELA: GESTÃO DE USUÁRIOS
+           ============================================================ */
+        async function renderUsuarios() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <h1>Gestão de Pessoas</h1>
+                <div class="card">
+                    <div class="form-grid">
+                        <input type="text" id="u-nome" placeholder="Nome Completo">
+                        <input type="number" id="u-mat" placeholder="Matrícula">
+                        <input type="email" id="u-email" placeholder="E-mail Corporativo">
+                        <input type="password" id="u-senha" placeholder="Senha Provisória">
+                        <select id="u-ti"><option value="false">Colaborador</option><option value="true">TI / Admin</option></select>
+                        <button onclick="salvarUsuario()">Criar Acesso</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>MAT</th><th>Nome</th><th>E-mail</th><th>Perfil</th></tr></thead>
+                            <tbody id="lista-usuarios"></tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            carregarTabelaUsuarios();
+        }
+
+        async function salvarUsuario() {
+    const n = document.getElementById('u-nome').value;
+    const m = document.getElementById('u-mat').value;
+    const e = document.getElementById('u-email').value;
+    const s = document.getElementById('u-senha').value;
+    const ti = document.getElementById('u-ti').value === "true";
+
+    const { error } = await supabaseClient
+        .from('usuarios')
+        .insert([{
+            nome: n,
+            matricula: m,
+            email: e,
+            senha: s,
+            is_ti: ti
+        }]);
+
+    if (error) {
+        console.error(error);
+        alert("Erro ao salvar usuário: " + error.message);
+        return;
+    }
+
+    alert("Usuário criado com sucesso!");
+    renderUsuarios();
+}
+
+        async function carregarTabelaUsuarios() {
+    const { data: dados, error } = await supabaseClient
+        .from('usuarios')
+        .select('*')
+        .order('matricula', { ascending: true });
+
+    if (error) {
+        console.error("Erro ao carregar usuários:", error);
+        return;
+    }
+
+    document.getElementById('lista-usuarios').innerHTML = dados.map(u => `
+        <tr>
+            <td>${u.matricula}</td>
+            <td>${u.nome}</td>
+            <td>${u.email}</td>
+            <td>
+                <span class="badge ${u.is_ti ? 'status-aprovado' : ''}">
+                    ${u.is_ti ? 'TI' : 'Geral'}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+       
+   /* ============================================================
+   TELA: MEUS TERMOS (SUPABASE)
+   ============================================================ */
+async function renderTermos() {
+    const container = document.getElementById('view-container');
+    
+    // Busca no Supabase
+    let query = supabaseClient.from('termos').select('*');
+    if (!currentUser.is_ti) {
+        query = query.eq('usuario_id', currentUser.id);
+    }
+
+    const { data: lista, error } = await query.order('created_at', { ascending: false });
+
+    if (error) return console.error("Erro Supabase:", error);
+
+    container.innerHTML = `
+        <div class="header-page"><h1>Meus Termos e Documentos</h1></div>
+        <div class="card">
+            <table class="table-custom">
+                <thead>
+                    <tr><th>Nº Termo</th><th>Tipo</th><th>Data</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                    ${lista && lista.length > 0 ? lista.map(t => `
+                        <tr>
+                            <td><b>#${t.solicitacao_id}</b></td>
+                            <td>${t.tipo} ${t.equipamento_cod ? `(${t.equipamento_cod})` : ''}</td>
+                            <td>${t.data_geracao}</td>
+                            <td><button class="btn-outline" onclick="visualizarTermo('${t.id}')">📄 Visualizar / Imprimir</button></td>
+                        </tr>
+                    `).join('') : '<tr><td colspan="4">Nenhum documento encontrado.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function renderHistorico() {
+    const container = document.getElementById('view-container');
+    
+    // Busca no Supabase todas as movimentações
+    const { data: dados, error } = await supabaseClient
+        .from('termos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) return console.error(error);
+
+    container.innerHTML = `
+        <div class="header-page"><h1>Auditoria de Empréstimos</h1></div>
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Usuário</th><th>Patrimônio</th><th>Status</th><th>Ação</th></tr></thead>
+                    <tbody>
+                        ${dados && dados.length > 0 ? dados.map(t => `
+                            <tr>
+                                <td>${t.usuario_nome}</td>
+                                <td>${t.equipamento_cod || 'N/A'}</td>
+                                <td>
+                                    <span class="badge ${t.devolvido ? 'status-aprovado' : 'status-pendente'}">
+                                        ${t.devolvido ? 'Devolvido' : 'Em Posse'}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${(!t.devolvido && t.equipamento_cod && t.equipamento_cod !== 'N/A - SERVIÇO') ? 
+                                        `<button onclick="confirmarDevolucao('${t.id}', '${t.equipamento_cod}')" style="background:#f59e0b; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Dar Baixa</button>` 
+                                        : '---'}
+                                </td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="4">Sem registros.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function visualizarTermo(id) {
+    // Busca o termo específico no Supabase
+    const { data: t, error } = await supabaseClient
+        .from('termos')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error || !t) return alert("Erro ao carregar detalhes do termo.");
+    
+    let tituloTermo = "TERMO DE RESPONSABILIDADE";
+    let corpoTexto = "";
+
+    // LÓGICA DE TEXTO POR TIPO (Mantendo seus parâmetros)
+    if (t.tipo === 'Notebook') {
+        corpoTexto = `
+            <p>Pelo presente instrumento, declaro ter recebido o equipamento <b>Notebook (Patrimônio: ${t.equipamento_cod})</b> em perfeitas condições de uso e conservação.</p>
+            <p>1. Comprometo-me a utilizar o equipamento exclusivamente para fins profissionais/pedagógicos.<br>
+            2. É vedada a instalação de softwares não licenciados ou modificações de hardware.<br>
+            3. Em caso de dano por negligência ou extravio, autorizo a apuração de responsabilidade conforme normas vigentes.</p>
+        `;
+    } else if (t.tipo === 'Projetor') {
+        corpoTexto = `
+            <p>Declaro o recebimento do <b>Projetor Multimídia (Patrimônio: ${t.equipamento_cod})</b> para uso temporário.</p>
+            <p>1. O usuário é responsável pela integridade das lentes e cabos (HDMI/VGA/Energia).<br>
+            2. O equipamento deve ser devolvido imediatamente após o término da atividade.<br>
+            3. Evite desligar o projetor diretamente da tomada sem o ciclo de resfriamento da lâmpada.</p>
+        `;
+    } else {
+        tituloTermo = "ORDEM DE SERVIÇO TÉCNICO (OS)";
+        corpoTexto = `
+            <p>Este documento atesta a realização de serviços técnicos no setor de TI para o colaborador <b>${t.usuario_nome}</b>.</p>
+            <p><b>DESCRIÇÃO DO SERVIÇO:</b>Assistência Técnica.<br>
+            <b>STATUS FINAL:</b> Serviço concluído e testado junto ao usuário solicitante.</p>
+            <p>O equipamento/sistema foi entregue em pleno funcionamento, sem pendências técnicas nesta data.</p>
+        `;
+    }
+
+    const modal = document.getElementById('modal-termo');
+    const printArea = document.getElementById('print-area');
+    
+    printArea.innerHTML = `
+        <div class="no-print" style="margin-bottom: 25px; display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <button class="secondary" onclick="fecharModal()">⬅️ Voltar ao Sistema</button>
+            <button onclick="window.print()" style="background: #059669; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Imprimir Documento Agora</button>
+        </div>
+        
+        <div id="printable-content" style="border: 2px solid #000; padding: 40px; font-family: 'Times New Roman', serif; color: #000; background: #fff; min-height: 800px; position: relative;">
+            <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px;">
+                <h1 style="margin:0; font-size: 22px;">COTEC - GOIÁS</h1>
+                <h2 style="margin:5px 0; font-size: 18px;">${tituloTermo}</h2>
+            </div>
+
+            <div style="text-align:right; margin-bottom: 30px; font-size: 18px;">
+                <b>OS Nº: <span style="color: red;">${t.solicitacao_id}</span></b>
+            </div>
+
+            <div style="margin-bottom: 40px; font-size: 16px; line-height: 1.8; text-align: justify;">
+                <p>Eu, <b>${t.usuario_nome}</b>, devidamente identificado(a) sob a matrícula nº <b>${t.usuario_id || '---'}</b>, pertencente ao quadro desta instituição:</p>
+                ${corpoTexto}
+            </div>
+
+            <div style="margin-top: 100px;">
+                <p style="text-align: center;">Santa Helena de Goiás, ${t.data_geracao}</p>
+                <div style="display:flex; justify-content: space-around; margin-top: 80px; text-align:center;">
+                    <div style="border-top: 1px solid #000; width: 250px; padding-top: 10px;">
+                        <b>ASSINATURA DO USUÁRIO</b><br>
+                        
+                    </div>
+                    <div style="border-top: 1px solid #000; width: 250px; padding-top: 10px;">
+                        <b>RESPONSÁVEL TI</b><br>
+                        <span style="font-size: 12px;">Assinatura e Carimbo</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="position: absolute; bottom: 20px; left: 40px; right: 40px; font-size: 10px; border-top: 1px solid #eee; padding-top: 10px; color: #666; text-align: center;">
+                SIGTI - Sistema Interno de Gestão de TI | Documento gerado eletronicamente em ${new Date().toLocaleString()}
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modal-termo').style.display = 'none';
+}
+
+        /* ============================================================
+           TELA: HISTÓRICO E DEVOLUÇÕES
+           ============================================================ */
+        
+
+    async function confirmarDevolucao(idTermo, patrimonio) {
+    if (!confirm(`Confirmar a devolução do patrimônio ${patrimonio}?`)) return;
+
+    try {
+        // 1. Atualiza o termo (IMPORTANTE: usamos o AWAIT aqui)
+        const { error: errorTermo } = await supabaseClient
+            .from('termos')
+            .update({ devolvido: true })
+            .eq('id', idTermo);
+
+        if (errorTermo) throw errorTermo;
+
+        // 2. Volta o item para disponível (AWAIT aqui também)
+        const { error: errorEstoque } = await supabaseClient
+            .from('estoque')
+            .update({ status: 'disponivel' })
+            .eq('patrimonio', patrimonio);
+
+        if (errorEstoque) throw errorEstoque;
+
+        alert("Devolução registrada com sucesso!");
+
+        // 3. Agora sim, recarrega a tela. 
+        // Como o 'await' segurou o código, os dados já estarão novos no banco.
+        await renderHistorico(); 
+
+    } catch (err) {
+        console.error("Erro na devolução:", err);
+        alert("Erro ao processar: " + err.message);
+    }
+}
+
+        /* ============================================================
+           UTILITÁRIOS
+           ============================================================ */
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('sigti-theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+
+        // Carregar tema salvo
+        if(localStorage.getItem('sigti-theme') === 'dark') document.body.classList.add('dark-mode');
+
+    </script>
+    
+</body>
+
+</html>
