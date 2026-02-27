@@ -381,7 +381,7 @@
 
             if (usuario) {
                 currentUser = usuario;
-                
+                localStorage.setItem('sigti_user', JSON.stringify(usuario));
                 // Transição de tela
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('sidebar').style.display = 'flex';
@@ -1042,7 +1042,7 @@ function fecharModal() {
     if (!confirm(`Confirmar a devolução do patrimônio ${patrimonio}?`)) return;
 
     try {
-        // 1. Atualiza o termo (IMPORTANTE: usamos o AWAIT aqui)
+        
         const { error: errorTermo } = await supabaseClient
             .from('termos')
             .update({ devolvido: true })
@@ -1050,7 +1050,6 @@ function fecharModal() {
 
         if (errorTermo) throw errorTermo;
 
-        // 2. Volta o item para disponível (AWAIT aqui também)
         const { error: errorEstoque } = await supabaseClient
             .from('estoque')
             .update({ status: 'disponivel' })
@@ -1060,8 +1059,7 @@ function fecharModal() {
 
         alert("Devolução registrada com sucesso!");
 
-        // 3. Agora sim, recarrega a tela. 
-        // Como o 'await' segurou o código, os dados já estarão novos no banco.
+       
         await renderHistorico(); 
 
     } catch (err) {
@@ -1078,7 +1076,7 @@ function fecharModal() {
             localStorage.setItem('sigti-theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
         }
 
-        // Carregar tema salvo
+       
         if(localStorage.getItem('sigti-theme') === 'dark') document.body.classList.add('dark-mode');
 
 
@@ -1133,6 +1131,26 @@ function logout() {
 
     document.getElementById('admin-menu').style.display = 'none';
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+    const salvo = localStorage.getItem('sigti_user');
+    if (salvo) {
+        currentUser = JSON.parse(salvo);
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('sidebar').style.display = 'flex';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('user-name').innerText = currentUser.nome;
+        document.getElementById('user-role').innerText = currentUser.is_ti ? 'Administrador TI' : 'Colaborador';
+        if(currentUser.is_ti) document.getElementById('admin-menu').style.display = 'block';
+        if (typeof navegar === "function") navegar('solicitacoes', document.querySelector('.nav-item'));
+    }
+});
+
+function logout() {
+    localStorage.removeItem('sigti_user'); 
+    window.location.reload();
+}
+
     </script>
     
 </body>
