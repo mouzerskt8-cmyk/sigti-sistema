@@ -37,7 +37,7 @@
 
         /* --- RESET E ESTILOS GERAIS --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg);
@@ -309,7 +309,7 @@
 
     <div class="sidebar" id="sidebar" style="display: none;">
         <h1>SIGTI</h1>
-        
+
         <div id="user-info" style="padding: 0 12px 32px 12px; border-bottom: 1px solid #1e293b; margin-bottom: 32px;">
             <div style="font-size: 14px; font-weight: 600;" id="user-name">Carregando...</div>
             <div style="font-size: 12px; color: #64748b;" id="user-role">Setor TI</div>
@@ -340,7 +340,7 @@
         <div id="view-container"></div>
     </main>
 
-   
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -363,51 +363,60 @@
     /* ============================================================
        SISTEMA DE AUTENTICAÇÃO
        ============================================================ */
+
     async function fazerLogin() {
-        const email = document.getElementById('log-email').value.trim();
-        const senha = document.getElementById('log-senha').value.trim();
-        const errorMsg = document.getElementById('login-error');
+    const email = document.getElementById('log-email').value.trim().toLowerCase();
+    const senha = document.getElementById('log-senha').value.trim();
+    const errorMsg = document.getElementById('login-error');
 
-        try {
-            const { data: usuario, error } = await supabaseClient
-                .from('usuarios')
-                .select('*')
-                .eq('email', email)
-                .eq('senha', senha)
-                .eq('ativo', true)
-                .maybeSingle();
+    try {
+        const senhaHash = await gerarHash(senha);
 
-            if (error) throw error;
+        const { data: usuario, error } = await supabaseClient
+            .from('usuarios')
+            .select('*')
+            .eq('email', email)
+            .eq('senha', senhaHash)
+            .eq('ativo', true)
+            .maybeSingle();
 
-            if (usuario) {
-                currentUser = usuario;
-                localStorage.setItem('sigti_user', JSON.stringify(usuario));
-                // Transição de tela
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('sidebar').style.display = 'flex';
-                document.getElementById('app').style.display = 'block';
-                
-                document.getElementById('user-name').innerText = currentUser.nome;
-                document.getElementById('user-role').innerText = currentUser.is_ti ? 'Administrador TI' : 'Colaborador';
-                
-                if(currentUser.is_ti) {
-                    document.getElementById('admin-menu').style.display = 'block';
-                }
-                
-                // Se você tiver a função navegar definida, ela será chamada aqui
-                if (typeof navegar === "function") {
-                    navegar('solicitacoes', document.querySelector('.nav-item'));
-                }
-            } else {
-                errorMsg.style.display = 'block';
+        if (error) throw error;
+
+        if (usuario) {
+            currentUser = usuario;
+            localStorage.setItem('sigti_user', JSON.stringify(usuario));
+
+            // --- AQUI ESTÁ A SOLUÇÃO DO NOME ---
+            document.getElementById('user-name').innerText = usuario.nome;
+            document.getElementById('user-role').innerText = usuario.is_ti ? "Administrador TI" : "Colaborador";
+            
+            // Mostra o menu de admin se for TI
+            if (usuario.is_ti) {
+                document.getElementById('admin-menu').style.display = 'block';
             }
-        } catch (err) {
-            console.error("Erro no Login:", err);
-            alert("Erro técnico: " + err.message);
+
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('sidebar').style.display = 'flex';
+            document.getElementById('app').style.display = 'block';
+            
+            navegar('solicitacoes');
+        } else {
+            errorMsg.style.display = 'block';
         }
-        
+
+    } catch (err) {
+        console.error("Erro no Login:", err);
+        alert("Erro técnico: " + err.message);
     }
-        
+}
+
+async function gerarHash(texto) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(texto);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
         /* ============================================================
            ROTEAMENTO E NAVEGAÇÃO
@@ -494,23 +503,24 @@
             carregarTabelaOS();
         }
 
-        function abrirModalOS() {
+    function abrirModalOS() {
             const f = document.getElementById('form-os');
             f.style.display = f.style.display === 'none' ? 'block' : 'none';
         }
 
-        
 
-        async function enviarOS() {
-    const tipo = document.getElementById('os-tipo').value;
-    const desc = document.getElementById('os-desc').value;
 
-    if (!desc) return alert("Descreva o problema!");
+    async function enviarOS() {
+            const tipo = document.getElementById('os-tipo').value;
+            const desc = document.getElementById('os-desc').value;
 
-    try {
+            if (!desc) return alert("Descreva o problema!");
+
+            try {
 
         const { data, error } = await supabaseClient
             .from('solicitacoes')
+            
             .insert([
                 { 
                     usuario_id: currentUser.id, 
@@ -549,13 +559,47 @@
         /* ============================================================
            LÓGICA DE APROVAÇÃO (ID 2026001)
            ============================================================ */
-        
-async function processarOS(id, uid, tipo, nome) {
-    try {
-        let patrimonio = "N/A - SERVIÇO";
 
-        // 1️⃣ BUSCAR ESTOQUE NO SUPABASE
+     async function processarOS(id, uid, tipo, nome) {
+    try {
+
+        // 1️⃣ Buscar OS
+        const { data: os, error: errOS } = await supabaseClient
+            .from('solicitacoes')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (errOS) throw new Error("Erro ao buscar OS");
+
+        const descricaoOriginalDaOS = os.descricao;
+        let patrimonio = "SERVIÇO";
+
+        // 🔧 MANUTENÇÃO
+        if (tipo === 'Manutenção') {
+
+            // Se estiver pendente → colocar em andamento
+            if (os.status === 'pendente') {
+                await supabaseClient
+                    .from('solicitacoes')
+                    .update({ status: 'em_andamento' })
+                    .eq('id', id);
+
+                alert("OS colocada em andamento.");
+                navegar('solicitacoes');
+                return;
+            }
+
+            // Se já estiver em andamento → concluir e gerar termo
+            if (os.status !== 'em_andamento') {
+                alert("Essa OS já foi finalizada.");
+                return;
+            }
+        }
+
+        // 🖥️ Notebook ou Projetor → buscar estoque
         if (tipo === 'Notebook' || tipo === 'Projetor') {
+
             const { data: estoque, error: errE } = await supabaseClient
                 .from('estoque')
                 .select('*')
@@ -565,19 +609,20 @@ async function processarOS(id, uid, tipo, nome) {
             if (errE) throw new Error("Erro ao buscar estoque");
 
             if (!estoque || estoque.length === 0) {
-                return alert(`ERRO: Não há ${tipo} disponível no estoque.`);
+                alert(`ERRO: Não há ${tipo} disponível no estoque.`);
+                return;
             }
 
             const listaCodigos = estoque.map(i => i.patrimonio);
             const input = prompt(`Selecione um patrimônio disponível:\n${listaCodigos.join(" | ")}`);
 
             if (!input || !listaCodigos.includes(input)) {
-                return alert("Patrimônio inválido.");
+                alert("Patrimônio inválido.");
+                return;
             }
 
             patrimonio = input;
 
-            // Baixa no estoque (Update no Supabase)
             const { error: errPatch } = await supabaseClient
                 .from('estoque')
                 .update({ status: 'emprestado' })
@@ -586,20 +631,22 @@ async function processarOS(id, uid, tipo, nome) {
             if (errPatch) throw new Error("Erro ao atualizar estoque");
         }
 
-        // 2️⃣ GERAR ID SEQUENCIAL (2026001...)
+        // 📌 3️⃣ GERAR ID SEQUENCIAL
         const anoAtual = new Date().getFullYear();
-        
+
         const { data: todosTermos, error: errT } = await supabaseClient
             .from('termos')
             .select('solicitacao_id');
 
         if (errT) throw new Error("Erro ao buscar termos");
 
-        const termosDoAno = todosTermos.filter(t => 
-            t.solicitacao_id && t.solicitacao_id.toString().startsWith(anoAtual.toString())
+        const termosDoAno = todosTermos.filter(t =>
+            t.solicitacao_id &&
+            t.solicitacao_id.toString().startsWith(anoAtual.toString())
         );
 
         let proximoNumero = 1;
+
         if (termosDoAno.length > 0) {
             const sequenciais = termosDoAno.map(t => {
                 const numero = t.solicitacao_id.toString().substring(4);
@@ -610,7 +657,7 @@ async function processarOS(id, uid, tipo, nome) {
 
         const idCustom = `${anoAtual}${proximoNumero.toString().padStart(3, '0')}`;
 
-        // 3️⃣ SALVAR TERMO NO SUPABASE
+        // 📝 4️⃣ SALVAR TERMO
         const { error: errSalvar } = await supabaseClient
             .from('termos')
             .insert([{
@@ -619,22 +666,23 @@ async function processarOS(id, uid, tipo, nome) {
                 usuario_nome: nome,
                 equipamento_cod: patrimonio,
                 tipo: tipo,
+                descricao: descricaoOriginalDaOS,
                 data_geracao: new Date().toLocaleDateString('pt-BR')
             }]);
 
         if (errSalvar) throw new Error("Erro ao gerar termo no banco");
 
-        // 4️⃣ ATUALIZAR STATUS DA SOLICITAÇÃO
+        // 🔄 5️⃣ Atualizar status da OS
+        const novoStatus = tipo === 'Manutenção' ? 'concluido' : 'aprovado';
+
         const { error: errFinal } = await supabaseClient
             .from('solicitacoes')
-            .update({ status: 'aprovado' })
+            .update({ status: novoStatus })
             .eq('id', id);
 
         if (errFinal) throw new Error("Erro ao finalizar solicitação");
 
         alert(`Ordem de Serviço #${idCustom} gerada com sucesso!`);
-        
-        // Recarrega a tela atual para ver as mudanças
         navegar('solicitacoes');
 
     } catch (erro) {
@@ -642,8 +690,8 @@ async function processarOS(id, uid, tipo, nome) {
         alert("Erro técnico: " + erro.message);
     }
 }
-async function carregarTabelaOS() {
-    const { data: lista, error } = await supabaseClient
+        async function carregarTabelaOS() {
+            const { data: lista, error } = await supabaseClient
         .from('solicitacoes')
         .select('*')
         .order('created_at', { ascending: false });
@@ -656,20 +704,40 @@ async function carregarTabelaOS() {
     const tbody = document.getElementById('lista-os');
     if (!tbody) return;
 
-    tbody.innerHTML = lista.map(os => `
+   tbody.innerHTML = lista.map(os => {
+
+    let botao = '---';
+
+    if (currentUser.is_ti) {
+
+        if (os.status === 'pendente') {
+            botao = `
+                <button onclick="processarOS('${os.id}', '${os.usuario_id}', '${os.tipo}', '${os.usuario_nome}')" 
+                    style="padding:6px 12px; font-size:12px;">
+                    Iniciar
+                </button>`;
+        }
+
+        else if (os.status === 'em_andamento') {
+            botao = `
+                <button onclick="processarOS('${os.id}', '${os.usuario_id}', '${os.tipo}', '${os.usuario_nome}')" 
+                    style="padding:6px 12px; font-size:12px;">
+                    Concluir
+                </button>`;
+        }
+    }
+
+    return `
         <tr>
             <td>#${os.id}</td>
             <td>${new Date(os.created_at || Date.now()).toLocaleDateString()}</td>
             <td>${os.usuario_nome}</td>
             <td><b>${os.tipo}</b></td>
             <td><span class="badge status-${os.status}">${os.status}</span></td>
-            <td>
-                ${currentUser.is_ti && os.status === 'pendente'
-                    ? `<button onclick="processarOS(${os.id}, ${os.usuario_id}, '${os.tipo}', '${os.usuario_nome}')" style="padding:6px 12px; font-size:12px;">Analisar</button>`
-                    : '---'}
-            </td>
+            <td>${botao}</td>
         </tr>
-    `).join('');
+    `;
+}).join('');
 }
 /* ============================================================
    TELA: GESTÃO DE ESTOQUE
@@ -772,8 +840,8 @@ async function carregarTabelaEstoque() {
                     <div class="form-grid">
                         <input type="text" id="u-nome" placeholder="Nome Completo">
                         <input type="number" id="u-mat" placeholder="Matrícula">
-                        <input type="email" id="u-email" placeholder="E-mail Corporativo">
-                        <input type="password" id="u-senha" placeholder="Senha Provisória">
+                        <input type="email" id="u-email" placeholder="E-mail Corporativo" autocomplete="new-password">
+                        <input type="password" id="u-senha" placeholder="Senha Provisória" autocomplete="new-password">
                         <select id="u-ti"><option value="false">Colaborador</option><option value="true">TI / Admin</option></select>
                         <button onclick="salvarUsuario()">Criar Acesso</button>
                     </div>
@@ -799,30 +867,53 @@ async function carregarTabelaEstoque() {
         }
 
         async function salvarUsuario() {
-    const n = document.getElementById('u-nome').value;
-    const m = document.getElementById('u-mat').value;
-    const e = document.getElementById('u-email').value;
-    const s = document.getElementById('u-senha').value;
-    const ti = document.getElementById('u-ti').value === "true";
+            const n = document.getElementById('u-nome').value.trim();
+            const m = document.getElementById('u-mat').value.trim();
+            const e = document.getElementById('u-email').value.trim().toLowerCase();
+            const s = document.getElementById('u-senha').value.trim();
+            const ti = document.getElementById('u-ti').value === "true";
 
-    const { error } = await supabaseClient
-        .from('usuarios')
-        .insert([{
-            nome: n,
-            matricula: m,
-            email: e,
-            senha: s,
-            is_ti: ti
-        }]);
+            try {
 
-    if (error) {
-        console.error(error);
-        alert("Erro ao salvar usuário: " + error.message);
-        return;
+        // 🔒 VALIDAÇÕES PRIMEIRO
+        if (!n || !m || !e || !s) {
+            alert("Preencha todos os campos obrigatórios!");
+            return;
+        }
+
+        if (!e.includes("@")) {
+            alert("Email inválido.");
+            return;
+        }
+
+        if (s.length < 6) {
+            alert("Senha deve ter no mínimo 6 caracteres.");
+            return;
+        }
+
+        // 🔐 Agora sim gera hash
+        const senhaHash = await gerarHash(s);
+
+        const { error } = await supabaseClient
+            .from('usuarios')
+            .insert([{
+                nome: n,
+                matricula: m,
+                email: e,
+                senha: senhaHash,
+                is_ti: ti,
+                ativo: true
+            }]);
+
+        if (error) throw error;
+
+        alert("Usuário criado com sucesso!");
+        renderUsuarios();
+
+    } catch (err) {
+        console.error("Erro ao salvar usuário:", err);
+        alert("Erro ao salvar usuário: " + err.message);
     }
-
-    alert("Usuário criado com sucesso!");
-    renderUsuarios();
 }
 
     async function carregarTabelaUsuarios() {
@@ -849,29 +940,27 @@ async function carregarTabelaEstoque() {
                 </span>
             </td>
             <td style="display:flex; gap:6px;">
-                <button style="padding:6px 10px; font-size:12px;"
-                    onclick="alterarSenha(${u.id})">
-                    🔑 Senha
-                </button>
+            <button style="padding:6px 10px; font-size:12px;" onclick="alterarSenha('${u.id}')">
+              🔑 Senha
+              </button>
 
-                ${currentUser.id !== u.id ? `
-                <button style="padding:6px 10px; font-size:12px; background:#ef4444;"
-                    onclick="excluirUsuario(${u.id})">
-                    🗑 Excluir
-                </button>
-                ` : `<span style="font-size:12px; color:#64748b;">Você</span>`}
-            </td>
+    ${currentUser.id !== u.id ? `
+            <button style="padding:6px 10px; font-size:12px; background:#ef4444;" onclick="excluirUsuario('${u.id}')">
+                🗑 Excluir
+            </button>
+             ` : `<span style="font-size:12px; color:#64748b;">Você</span>`}
+                </td>
         </tr>
     `).join('');
 }
 
-       
+
    /* ============================================================
    TELA: MEUS TERMOS (SUPABASE)
    ============================================================ */
 async function renderTermos() {
     const container = document.getElementById('view-container');
-    
+
     // Busca no Supabase
     let query = supabaseClient.from('termos').select('*');
     if (!currentUser.is_ti) {
@@ -906,7 +995,7 @@ async function renderTermos() {
 
 async function renderHistorico() {
     const container = document.getElementById('view-container');
-    
+
     // Busca no Supabase todas as movimentações
     const { data: dados, error } = await supabaseClient
         .from('termos')
@@ -954,7 +1043,7 @@ async function visualizarTermo(id) {
         .single();
 
     if (error || !t) return alert("Erro ao carregar detalhes do termo.");
-    
+
     let tituloTermo = "TERMO DE RESPONSABILIDADE";
     let corpoTexto = "";
 
@@ -969,23 +1058,30 @@ async function visualizarTermo(id) {
     } else if (t.tipo === 'Projetor') {
         corpoTexto = `
             <p>Declaro o recebimento do <b>Projetor Multimídia (Patrimônio: ${t.equipamento_cod})</b> para uso temporário.</p>
-            <p>1. O usuário é responsável pela integridade das lentes e cabos (HDMI/VGA/Energia).<br>
+            <p>1. O usuário é responsável pela integridade do equipamento.<br>
             2. O equipamento deve ser devolvido imediatamente após o término da atividade.<br>
             3. Evite desligar o projetor diretamente da tomada sem o ciclo de resfriamento da lâmpada.</p>
         `;
     } else {
         tituloTermo = "ORDEM DE SERVIÇO TÉCNICO (OS)";
+
         corpoTexto = `
-            <p>Este documento atesta a realização de serviços técnicos no setor de TI para o colaborador <b>${t.usuario_nome}</b>.</p>
-            <p><b>DESCRIÇÃO DO SERVIÇO:</b>Assistência Técnica.<br>
-            <b>STATUS FINAL:</b> Serviço concluído e testado junto ao usuário solicitante.</p>
-            <p>O equipamento/sistema foi entregue em pleno funcionamento, sem pendências técnicas nesta data.</p>
-        `;
+            <p>Este documento formaliza a abertura e execução de serviço técnico junto ao setor de Tecnologia da Informação.</p>
+
+            <p><b>SOLICITANTE:</b> ${t.usuario_nome}</p>
+            <p><b>DESCRIÇÃO INFORMADA:</b> ${t.descricao || 'Conforme registro interno.'}</p>
+
+            <p><b>PROCEDIMENTO REALIZADO:</b> Atendimento técnico realizado, com diagnóstico e intervenção conforme necessidade operacional.</p>
+
+            <p><b>STATUS FINAL:</b> Serviço concluído e equipamento/sistema entregue em funcionamento na data abaixo.</p>
+
+            <p>Declaro estar ciente da conclusão do serviço e do recebimento do equipamento/sistema em condições adequadas de uso.</p>
+`;
     }
 
     const modal = document.getElementById('modal-termo');
     const printArea = document.getElementById('print-area');
-    
+
     printArea.innerHTML = `
         <div class="no-print" style="margin-bottom: 25px; display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
             <button class="secondary" onclick="fecharModal()">⬅️ Voltar ao Sistema</button>
@@ -1003,7 +1099,7 @@ async function visualizarTermo(id) {
             </div>
 
             <div style="margin-bottom: 40px; font-size: 16px; line-height: 1.8; text-align: justify;">
-                <p>Eu, <b>${t.usuario_nome}</b>, devidamente identificado(a) sob a matrícula nº <b>${t.usuario_id || '---'}</b>, pertencente ao quadro desta instituição:</p>
+                <p>Eu, <b>${t.usuario_nome}</b>, devidamente identificado(a) sob a matrícula nº <b>${t.matricula || ''}</b>, pertencente ao quadro desta instituição:</p>
                 ${corpoTexto}
             </div>
 
@@ -1036,12 +1132,13 @@ function fecharModal() {
         /* ============================================================
            TELA: HISTÓRICO E DEVOLUÇÕES
            ============================================================ */
-        
+
 
     async function confirmarDevolucao(idTermo, patrimonio) {
     if (!confirm(`Confirmar a devolução do patrimônio ${patrimonio}?`)) return;
 
     try {
+        // 1. Atualiza o termo (IMPORTANTE: usamos o AWAIT aqui)
         
         const { error: errorTermo } = await supabaseClient
             .from('termos')
@@ -1050,6 +1147,7 @@ function fecharModal() {
 
         if (errorTermo) throw errorTermo;
 
+        // 2. Volta o item para disponível (AWAIT aqui também)
         const { error: errorEstoque } = await supabaseClient
             .from('estoque')
             .update({ status: 'disponivel' })
@@ -1059,6 +1157,8 @@ function fecharModal() {
 
         alert("Devolução registrada com sucesso!");
 
+        // 3. Agora sim, recarrega a tela. 
+        // Como o 'await' segurou o código, os dados já estarão novos no banco.
        
         await renderHistorico(); 
 
@@ -1076,49 +1176,61 @@ function fecharModal() {
             localStorage.setItem('sigti-theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
         }
 
+        // Carregar tema salvo
        
         if(localStorage.getItem('sigti-theme') === 'dark') document.body.classList.add('dark-mode');
 
 
 
-async function alterarSenha(idUsuario) {
-    const novaSenha = prompt("Digite a nova senha:");
+    async function excluirUsuario(id) {
+        // 1. Confirmação
+        if (!confirm("Deseja realmente remover este acesso?")) return;
 
-    if (!novaSenha || novaSenha.length < 4) {
-        return alert("Senha inválida. Mínimo 4 caracteres.");
+        try {
+            console.log("Tentando excluir ID:", id); // Veja isso no F12
+
+            // 2. Executa a atualização no Supabase
+            const { error } = await supabaseClient
+                .from('usuarios')
+                .update({ ativo: false }) // Certifique-se que a coluna chama 'ativo'
+                .eq('id', id);
+
+            if (error) {
+                console.error("Erro do Supabase:", error);
+                alert("Erro no banco: " + error.message);
+                return;
+            }
+
+            // 3. Sucesso: Feedback e recarregar
+            alert("Usuário desativado com sucesso!");
+            
+            // Use a função que reconstrói a lista para ele sumir da tela
+            if (typeof carregarTabelaUsuarios === "function") {
+                carregarTabelaUsuarios();
+            } else {
+                renderUsuarios(); 
+            }
+
+        } catch (err) {
+            console.error("Erro catastrófico:", err);
+            alert("Erro inesperado: " + err.message);
+        }
     }
 
-    const { error } = await supabaseClient
+    async function alterarSenha(id) {
+        const nova = prompt("Nova senha:");
+        if (!nova) return;
+    
+        const hash = await gerarHash(nova);
+        const { error } = await supabaseClient
         .from('usuarios')
-        .update({ senha: novaSenha })
-        .eq('id', idUsuario);
+        .update({ senha: hash })
+        .eq('id', id);
 
-    if (error) {
-        console.error(error);
-        alert("Erro ao atualizar senha.");
-        return;
-    }
-
-    alert("Senha alterada com sucesso!");
+    if (error) alert("Erro: " + error.message);
+    else alert("Senha alterada!");
 }
 
-async function excluirUsuario(idUsuario) {
-    if (!confirm("Deseja DESATIVAR este usuário?")) return;
-
-    const { error } = await supabaseClient
-        .from('usuarios')
-        .update({ ativo: false })
-        .eq('id', idUsuario);
-
-    if (error) {
-        console.error(error);
-        alert("Erro ao desativar usuário.");
-        return;
-    }
-
-    alert("Usuário desativado com sucesso!");
-    renderUsuarios();
-}
 function logout() {
     currentUser = null;
 
@@ -1152,7 +1264,5 @@ function logout() {
 }
 
     </script>
-    
-</body>
 
-</html>
+</body>
