@@ -226,6 +226,7 @@ async function processarOS(id, uid, tipo, nome) {
                 solicitacao_id: idCustom,
                 usuario_id: uid,
                 usuario_nome: nome,
+                    matricula: currentUser.matricula,
                 equipamento_cod: patrimonio,
                 tipo: tipo,
                 descricao: descricaoOriginalDaOS,
