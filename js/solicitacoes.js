@@ -95,12 +95,13 @@ async function renderSolicitacoes() {
         const { data, error } = await supabaseClient
     .from('solicitacoes')
     .insert([{
-        usuario_id: user.id,
-        usuario_nome: currentUser.nome,
-        tipo: tipo,
-        descricao: desc,
-        status: 'pendente'
-    }])
+    usuario_id: user.id,
+    usuario_nome: currentUser.nome,
+    matricula: currentUser.matricula,
+    tipo: tipo,
+    descricao: desc,
+    status: 'pendente'
+}])
     .select();
 
 console.log("DATA:", data);
@@ -226,7 +227,7 @@ async function processarOS(id, uid, tipo, nome) {
                 solicitacao_id: idCustom,
                 usuario_id: uid,
                 usuario_nome: nome,
-                    matricula: currentUser.matricula,
+                    matricula: os.matricula,
                 equipamento_cod: patrimonio,
                 tipo: tipo,
                 descricao: descricaoOriginalDaOS,
