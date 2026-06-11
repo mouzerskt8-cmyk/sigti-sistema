@@ -91,7 +91,8 @@ async function renderSolicitacoes() {
             alert("Usuário não está logado");
             return;
         }
-
+                console.log("user.id:", user.id);
+                console.log("currentUser:", currentUser);
         const { data, error } = await supabaseClient
     .from('solicitacoes')
     .insert([{
